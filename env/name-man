@@ -1,0 +1,5 @@
+NAME_COMMAND=":"
+if [ -n "$*" ] ; then
+    ~/ds/bin/name "$*"
+fi
+# NOTE: somewhere else **MUST** inject this into PROMPT_COMMAND!!!!!!

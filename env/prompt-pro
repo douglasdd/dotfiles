@@ -1,0 +1,47 @@
+# Normal Prompt (PS1)
+
+# See also: name, name-{auto,man}, title, and $PROMPT_COMMAND
+
+# Use explicit background colours to ensure that it works on b/w, w/b, ...
+
+# TODO if [ $? -eq 0 ] ; then 
+#    ${GREEN_OK}$ $? ${RESET} \n
+# else
+#    ${RED_ERR} $? \n ${RESET}
+# fi ${RESET}
+# ...and put it after \! 
+# TODO include ${#DIRSTACK[*]} depth (iff > 1)
+
+# [Time Date]
+PS1='\[\033[40m\033[1;31m\][\t \d]'
+
+# (X11_DISPLAY
+PS1="$PS1"' (${DISPLAY:+"\[\033[47m\]X:${DISPLAY/*:/}\[\033[40m\033[1;31m\]"}'
+
+# [SCREEN_SESSION]
+PS1="$PS1"'${STY:+" \[\033[36m\][${STY##*.}]\[\033[1;31m\]"}'
+
+# "$TITLE"  
+# Note: PROMPT_COMMAND may put this in the terminal title bar `name*`
+PS1="$PS1"')${TITLE:+" \[\033[1;32m\]\"$TITLE\"\[\033[1;31m\]"}'
+
+# Command history number
+PS1="$PS1"'\[\033[0m\] !\!'
+
+# \n
+# [user@host]
+PS1="$PS1"'\n[\[\033[0;31m\]\u\[\033[0m\]@\[\033[1;31m\]\h\[\033[0m\]'
+
+# Shell Level isn't really that usefull A typical screen session started in X
+# has values like 5 (GBuntu), 4 (Mac 10.8)
+#PS1="$PS1"' /$SHLVL'
+
+# (pushd/popd directory stack depth) ~/current/working/dir
+PS1="$PS1"'] \[\033[1;34m\]($((${#DIRSTACK[*]} -1))) \w\[\033[00m\]'
+
+# \n
+# previous command exit status
+PS1="$PS1"'\n\[\033[40m\033[42m\]$?'
+
+# $ or # (if root)
+PS1="$PS1"' \$\[\033[00m\] '

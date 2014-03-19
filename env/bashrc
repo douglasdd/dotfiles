@@ -1,0 +1,405 @@
+# ~/ds/env/bashrc                       -*- mode: shell-script; -*-
+#
+# Keep all shell settings inside the version-controlled dir: ~/ds/
+# Source it from a very simple ~/.bashrc:
+#     test  -r ~/ds/env/bashrc && . ~/ds/env/bashrc
+# and a very simple ~/.bash_profile:
+#     . ~/.bashrc
+
+# Reload all this stuff after a change
+alias bashrc='pushd ~ ; . .bashrc ; popd'
+
+#### Layout:
+# * ~/ds/env/bashrc     # keep control-flow (`if`s) here
+# * ~/ds/env/common.sh  # ALL-platforms settings
+# * ~/ds/env/os_*.sh    # per OS (& optionally per os+version)
+# * ~/ds/env/site_*.sh  # location / company / contract
+# * ~/ds/env/host_*.sh  # some boxes are just plain weird
+# * ~/ds/env/host_*_user_*.sh  # and so are certain accounts
+# * ~/.setup-account.sh # Kept OUT of version control for the paranoid
+# BUT note that some things must be done here at the start (umask)
+
+#### Bugs
+# * No thought has been given (yet) to making the ~/ds/ directory re-locatable,
+# * Many of the scripts assume that ~/ds/bin/ is in the $PATH.
+# * More things should be set up only when `if is-interactive-shell`
+
+#### Notes
+# * These env scripts are designed to *replace* current settings, not
+#   append, so they should be idempotent, safe to re-source to pick up changes.
+# * If any functions are defined before aliases that they use, we get:
+#       bash: some_alias: command not found
+#   + work around: re-source everything: `bashrc`
+#   + proper fix: change declaration order
+
+# Bash purists note:
+# I have purposely ignored the separation of .bashrc and .bash_profile;
+# by mashing all into one it is much easier to make changes quickly
+# available in other shells / terminals (see `bashrc` alias above).
+
+# Precedence reminder: (1) aliases; (2) functions; (3) binaries
+
+if [ -n "$DS_TRACE_BASHRC" ] ; then
+    set -x
+fi
+
+umask 0022
+
+IGNOREEOF=4
+
+# Allow function-names-with-hyphens.  I have >100 such functions.
+# This hack might break things (like ~/.xprofile) IFF they depended on
+# strict posix mode.  I'll fall off that bridge if I come to it.
+set +o posix
+
+# Another compatibility note: Missing in `dash`: [[, ==, >&, for (())
+
+function is-interactive-shell () {
+    test -n "$PS1" || return 1
+    # Damn, MintPPC seems to set PS1 no matter what, so also check tty
+    tty >/dev/null
+    # TODO: How portable is `tty`?
+}
+
+#### Environment mainipulation functions
+ 
+#pathadd() {
+#    if [ -d "$1" ] && [[ ":$PATH:" != *":$1:"* ]]; then
+#        PATH="$PATH:$1"
+#    fi
+#}
+# Or
+# alias checkInPath="echo $PATH | tr ':' '\n' | grep -x -c "
+
+function path_append () {
+  # stolen from fink's init.sh
+  if   eval test -z "\"\${$1}\"" ; then
+    eval "$1=\"$2\""
+  else
+    eval "$1=\"\$$1:$2\""
+  fi
+}
+function path_prepend () {
+  if   eval test -z "\"\${$1}\"" ; then
+    eval "$1=\"$2\""
+  else
+    eval "$1=\""$2:\$$1\"""
+  fi
+}
+function if_path_append() {
+  if [ -d "$2" ] ; then
+    path_append "$1" "$2"
+  fi
+}
+function if_path_prepend() {
+  if [ -d "$2" ] ; then
+    path_prepend "$1" "$2"
+  fi
+}
+function if_path_preap_trunk() {
+  preap="$1"  # Either 'pre' to prepend or 'ap' to append
+  trunk="$2"  # Trunk path to check for .../bin, .../lib, etc.
+  if [ ! -d "$trunk" ] ; then
+    return
+  fi
+  if_path_${preap}pend PATH            $trunk/bin
+  if_path_${preap}pend PATH            $trunk/sbin
+  if_path_${preap}pend MANPATH         $trunk/share/man
+  if_path_${preap}pend MANPATH         $trunk/man
+  if_path_${preap}pend INFOPATH        $trunk/share/info
+  if_path_${preap}pend INFOPATH        $trunk/info
+  if [ -d "$trunk" ] ; then
+      path_${preap}pend LD_LIBRARY_PATH $trunk/lib
+      if [ "$preapp" = "pre" ] ; then
+          CFLAGS="-I$trunk/include $CFLAGS"
+          CPPFLAGS="-I$trunk/include $CPPFLAGS"
+          CXXFLAGS="-I$trunk/include $CXXFLAGS"
+          LDFLAGS="-I$trunk/include $LDFLAGS"
+      else
+          CFLAGS="$CFLAGS -I$trunk/include"
+          CPPFLAGS="$CPPFLAGS -I$trunk/include"
+          CXXFLAGS="$CXXFLAGS -I$trunk/include"
+          LDFLAGS="$LDFLAGS -I$trunk/include"
+      fi
+  fi
+  if_path_${preap}pend PKG_CONFIG_PATH $trunk/lib/pkgconfig
+  if_path_${preap}pend PKG_CONFIG_PATH $trunk/share/pkgconfig
+}
+# NOTE on using if_path_<pre|a>pend() for ${*PATH} env vars:
+# * (-) It will skip directories that are not yet built/installed/mounted.
+#       (f/xe if X11 not yet installed, or NFS dirs not yet mounted).
+# * (+) So, existing shells will not get effects of newly appearing dir PATHs
+#       (allow fallback to previous (sane) environments).
+# * (+) It is easy to re-source with `bashrc`.
+# * (-) You shouldn't have re-source afer each `mount`.
+# * (+) These things change fast, I wind up re-`bashrc`ing often anyways.
+
+#### Basic setup of common paths
+if [ -z "$KEEP_PATH" ] ; then
+    # hard-coded default unless KEEP_PATH has a value
+    PATH=/usr/local/bin:/usr/bin:/bin
+fi
+PATH=$PATH:/usr/local/sbin:/usr/sbin:/sbin
+MANPATH="/usr/local/man:/usr/man:/usr/share/man:."
+LD_LIBRARY_PATH="/usr/local/lib:/usr/lib:/lib"
+PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
+CFLAGS="-I/usr/local/include -I/usr/include"
+CPPFLAGS="-I/usr/local/include -I/usr/include"
+CXXFLAGS="-I/usr/local/include -I/usr/include"
+LDFLAGS="-L/usr/local/lib -L/usr/lib -L/lib"
+export PATH MANPATH LD_LIBRARY_PATH PKG_CONFIG_PATH CFLAGS CPPFLAGS CXXFLAGS LDFLAGS
+
+XDIR=
+for env_x in /usr/X11R6 /usr/X11 /usr/openwin ; do
+    # /usr/ is already present, no need to include it in the candidate X dirs.
+    env_xt=$env_x/bin/xterm
+    if [ -x $env_xt -a ! -L $env_xt ] ; then
+        XDIR=$env_x
+        if_path_preap_trunk ap "$XDIR"
+        break  ## Could an f-ed up system have more than one?
+    fi
+done
+unset env_x env_xt
+
+if [ -d /usr/games ] ; then
+    path_append  PATH            /usr/games
+fi
+
+for env_p in /opt/gnome /opt/kde /opt/kde3 /usr/pkgsrc $HOME/pkgsrc ; do
+    if_path_preap_trunk pre "$env_p"
+done
+unset env_p
+export PATH MANPATH LD_LIBRARY_PATH
+
+# Source global definitions
+if [ -r /etc/bashrc ]; then
+  . /etc/bashrc
+fi
+
+PATH="$HOME/ds/bin:$PATH"
+PATH="$HOME/bin:$PATH"
+
+#### What, Where, Who
+# TODO: in-line hostname.sh, et al
+host=$(hostname.sh)
+arch=$(arch.sh)
+os=$(os.sh)
+# TODO: `eval $(os-version.pl -s)` to set all 6 at once
+os_ver1=$os-$(os-version.pl -1 2>/dev/null) || touch ~/DS_NOT_ON_PATH
+os_ver2=$os-$(os-version.pl -2 2>/dev/null)
+os_ver3=$os-$(os-version.pl -3 2>/dev/null)
+os_major=$(os-version.pl -j 2>/dev/null)
+os_minor=$(os-version.pl -n 2>/dev/null)
+os_patch=$(os-version.pl -p 2>/dev/null)
+# $USER, $USERNAME, $LOGNAME can NOT be relied upon until after OS-specific fixes
+# from ~/ds/env/os_$os*.sh..  See ~/ds/doc/user-env-vars.txt for more info.
+user=$(id -un 2>/dev/null)
+if [ -z "$user" ] ; then
+    # SunOS `id` doesnt support -un, only the (optional) /usr/xpg4 version does
+    user=$(logname)
+fi
+export os arch host user os_ver1 os_ver2 os_ver3 os_major os_minor os_patch
+
+if [ -r ~/.site ] ; then
+  . ~/.site
+else
+  SITE=unknown
+fi
+export SITE
+
+if [ "$SITE" = "unknown" ] ; then
+  # Leave (silent) tell-tale if the account is not configured
+  echo 'You need to configure a ~/.site file (copy from ~/ds/home/.site)' > ~/UNKNOWN-SITE.txt 2>/dev/null
+fi
+
+PATH="$HOME/bin/${os}-${arch}:$PATH"
+export PATH
+
+# carve-off the domain, if some app really needs the fqHn use: `hostname`
+HOSTNAME="$host"
+export HOSTNAME
+
+# Create minimal dirs that some scripts/functions assume to be present
+# (these could be soft links to dirs elsewhere [/var]/tmp/[$user/]...).
+if [ !  -d ~/log ] ; then 
+  mkdir -p ~/log
+fi
+if [ ! -d  ~/tmp ] ; then
+  mkdir -p ~/tmp
+  test -d ~/tmp/vim || mkdir ~/tmp/vim
+fi
+if [ ! -d ~/.config/host/$host ] ; then
+  mkdir -p ~/.config/host/$host
+fi
+
+TAB=$(builtin echo -en "\t")
+
+CLASSPATH="."
+export CLASSPATH
+
+PATH="$HOME/work/$SITE/bin:$PATH"
+
+gentoo_portage=/usr/lib/portage/bin
+if [ -d $gentoo_portage ] ; then
+  PATH="$PATH:/usr/lib/portage/bin"
+fi
+
+#### General (portable) aliases
+if [ -r ~/ds/env/common.sh ] ; then
+  . ~/ds/env/common.sh
+fi
+
+#### Load SPECIFIC settings for this OS, site, host, user
+for env_bit in os_${os} os_${os_ver1} os_${os_ver2} os_${os_ver3}  \
+               site_${SITE} site_${SITE}_os_${os}                  \
+               host_${host} host_${host}_user_${user} ; do
+  config=~/ds/env/${env_bit}.sh 
+  if [ -r $config ]; then
+    . $config
+    # TODO: aliases and functions in those files should be set 
+    # IFF is-interactive-shell.
+  fi
+done
+unset env_bit
+
+# TODO: consider also sourcing something like os_linux_distro_${distro}.sh
+# But should that Linux-specific distro detection logic go here (where 
+# control flow is), OR down in os_linux.sh?
+
+#### /tools: Local hand-compiled stuff takes precedence
+# See /tools/setenv.sh for JDK_VER (on Linux) --> PATH, JAVA_HOME
+# See /tools/setenv.sh for ANDROID_HOME (on any) --> PATH
+#
+# Needs to be after host-specific setup (pick right JDK ver)
+#
+# Aside:
+# Why not put all the stuff from /tools/setenv.sh into ~/ds/env/host_*.sh?
+# Legacy reason: Because /tools/... is also meant to be NFS shared to other
+# users who might not source ~/ds/env/bashrc.
+#############################################################################
+if [ -r /tools/setenv.sh  ] ; then
+  .     /tools/setenv.sh
+fi
+
+#### Fancy Prompt, and window Title
+# Must be after AFTER os-specifics have fixed ${USER,LOG}NAME.
+# Keep these as separate files for easy reuse by others / copy to new host.
+if is-interactive-shell ; then
+  if fgrep -i "$TERM" ~/ds/env/terms-no-prompt-ansi >/dev/null ; then
+    . ~/ds/env/prompt-bare2
+    LS_CLR=
+  else
+    . ~/ds/env/prompt-pro
+  fi
+
+  # Sets $NAME_COMMAND, Needs to be injected into PROMPT_COMMAND later
+  # NOTE: file name is confusing 'terms-no-title', `title` is something else (but relasted)
+  if [ -z "$NAME_COMMAND" ] ; then
+    if fgrep -i "$TERM" ~/ds/env/terms-no-title >/dev/null ; then
+      . ~/ds/env/name-man
+    else
+      . ~/ds/env/name-auto
+    fi
+  fi
+  # Changes require re-building PROMPT_COMMAND (see below).
+  alias name-auto='source ~/ds/env/name-auto ; bashrc'
+  alias name-man='source  ~/ds/env/name-man ; bashrc ; name'
+fi
+
+#### Aliases specific to this particular account+box
+# * NOT version controlled with the rest of ~/ds/ for the paranoid
+# * Next-to-LAST so we can override any more general mistakes
+if [ -r ~/.setup-account.sh ] ; then
+  . ~/.setup-account.sh
+else
+  touch ~/.setup-account.sh 2>/dev/null
+fi
+
+#### SSH Agent
+if [ -z "$skip_ssh_agent" ] ; then
+    . ~/ds/env/ssh-agent.sh
+fi
+
+#### After account-specific setups:
+if [ -n "$moz_ff_profile" ] ; then
+  bkmk_ff="$moz_ff_profile"/bookmarks.html
+fi
+if [ -n "$moz_profile" ] ; then
+  bkmk_moz="$moz_profile"/bookmarks.html
+fi
+
+#### Wicked uber-history adapted from ahd of kew.com:
+# TODO: `history` output includes trailing `# comments` too, so that could 
+# be a key to dumping raw-history into the dlog-work & stuff!!!!!!
+# See also: `h-*` functions/aliases in ./common.sh
+if is-interactive-shell ; then
+    if [ ! -d ~/.history.d ] ; then
+        mkdir ~/.history.d
+    fi
+    : ${HIST_BEGIN:=$(date "+%Y-%m-%d_%H-%M-%S")}
+    tty=$(basename $(tty))
+    HISTFILE=~/.history.d/$host${STY:+.${STY##*.}}.$tty.$HIST_BEGIN
+    HISTTIMEFORMAT="%F %T "  ## `history` cmd output, not in $HISTFILE, IF set
+    #HISTTIMEFORMAT=""   ## ...(even to ""), then time_t is recorded in $HISTFILE
+    HISTSIZE=5000       ## dflt 500  ## peak seen (so far) in my shells: ~2800
+    HISTFILESIZE=50000  ## dflt 500
+    #HISTIGNORE="&:[ ]*:exit"  ## : separated, & ==
+    #shopt -s histappend  ## dflt (or unset): overwrite
+    shopt -s cmdhist ## store multi-line commands as 1 line in history
+    # See also:
+    #### Eternal history
+    # adapted from ateijelo@ <http://www.debian-administration.org/articles/543>
+    # TODO: Can we do this with `trap "" DEBUG`? (see single global history
+    #       notes in ~/ds/doc/bash.txt)
+    # $host appears in BOTH file & entry format for: NFS shared homedir, ease of combining
+    HIST_ETERNAL_FILE=~/.history.d/ETERNAL.$host
+    HIST_ETERNAL_FORMAT_VERSION=4  # NAME_COMMAND to stop losing after `bashrc`
+    # NOTE: datetime from '... $(history) & $(date) ...' are prompt PRINT time,
+    #       so long running commands are only logged *when they finish*,
+    #       and we have no idea how long they took (unless the previous prompt
+    #       was printed right before the command was run).
+    # NOTE: Use $rtn__ because $? (exit code from prev command) can be interfered with
+    # ...by ';prev cmds ; ' or '$(embedded cmds)' *within* PROMPT_COMMAND.
+    # NOTE: Yes the same logged line reports both the command and it's return value!
+    PROMPT_COMMAND='rtn__=$? ; '"${NAME_COMMAND:- : }"' ; echo "'\
+'${HIST_ETERNAL_FORMAT_VERSION:+"|$HIST_ETERNAL_FORMAT_VERSION "}'\
+'$(date "+%Y-%m-%d %H-%M-%S") $host $LOGNAME@ [${STY:+"${STY##*.}"}] \$$$ '\
+'\"${TITLE:+"$TITLE"}\" X${DISPLAY:+:${DISPLAY/*:/}} <$PWD> ?${rtn__}= '\
+'!$(HISTTIMEFORMAT= history 1)" >> $HIST_ETERNAL_FILE'
+fi
+# Archive older than 180d:
+alias history-cleanup-tip='echo "cd ~/.history.d/  \\
+&& mkkdir 2012                                     \\
+&& find . -type d -name \"20??\" -prune -false -o  \\
+    -type f -name \"*.2012*\" -mtime +180          \\
+  | xargs  mv --target-directory 2012/"'
+# See also `otr` in <./common.sh>
+if [ "$H" = "none" ] ; then
+    # or maybe invoke with `bash ... +o history`?
+    unset HISTFILE
+    unset HISTTIMEFORMAT
+    HIST_ETERNAL_FILE=/dev/null
+    HISTFILESIZE=0
+    HISTSIZE=0
+fi
+# $ bash --norc
+# bash-4.1$ set | grep HIST
+# HISTFILE=/home/douglasdd/.bash_history
+# HISTFILESIZE=500
+# HISTSIZE=500
+
+# Some  bash envs search through package repository upon 'command not found'
+unset command_not_found_handle 2>/dev/null
+
+#### Cygwin - specific
+# must be VERY LAST, NOT in ~/ds/env/os_cygwin*.sh
+# See:
+#  * <win>/cygwin-cmd-here.reg
+#  * <win>/c/cygwin/cygwin.bat  ## my customized version
+if [ "$os" = "cygwin" -a -f "$HOME/cyg.dir" ] ; then
+  cwd_win=$( cat $HOME/cyg.dir | ~/ds/bin/trim-whitespace.pl)
+  cd "$( cygpath -u "$cwd_win" )"
+  rm -f "$HOME/cyg.dir"
+fi
+# TODO: Perhaps sed / perl instead  ds-specific `trim`
+# TODO: Does perl even come in a 'basic' cygwin install?

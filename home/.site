@@ -1,0 +1,5 @@
+# See: ~/ds/home/bashrc
+
+SITE=unknown
+export SITE
+

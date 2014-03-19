@@ -1,0 +1,10 @@
+NE="-ne"
+if test "${0##*/}" = "sh" ; then
+   NE=""
+   # NOTE sh (or bash running as `sh`) understands neither -n nor -e
+   # SO: running w/ PROMPT_COMMAND in these dumb sh modes
+   # will add extra blank lines before each prompt :-P
+fi
+
+NAME_COMMAND='builtin echo '$NE' "\033]0;${TITLE:+$TITLE }${STY:+"[${STY##*.}] "}${LOGNAME}@${HOSTNAME} : $(dirs)\007"'
+# NOTE: somewhere else **MUST** inject this into PROMPT_COMMAND!!!!!!
