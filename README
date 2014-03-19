@@ -1,0 +1,17 @@
+This directory ~/ds/ contains configuration, scripts, and documentation
+for convenient and powerful command-line UNIX, Mac OS X, and Cygwin.
+
+Courtesy and copyright 1992+, Douglas D. Dickinson <douglasdd@gmail.com>
+
+
+To make this your environment:
+
+    mv  ~/.bashrc    ~/.bashrc.before-ds
+    cp  ~/ds/home/.bashrc    ~/.bashrc
+
+To add these scripts and environment into your own shell config,
+add this line to your existing ~/.bashrc file:
+
+    test -r ~/ds/env/bashrc && . ~/ds/env/bashrc
+
+See ~/ds/env/bashrc for notes on structure/layout of this directory.
