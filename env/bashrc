@@ -182,14 +182,11 @@ for arg in '-p' '-m' '-i' ; do
   fi
 done
 test -z "$arch" && arch="unknown"
-
-# TODO: `eval $(os-version.pl -s)` to set all 6 at once
-os_ver1=$os-$(os-version.pl -1 2>/dev/null) || touch ~/DS_NOT_ON_PATH
-os_ver2=$os-$(os-version.pl -2 2>/dev/null)
-os_ver3=$os-$(os-version.pl -3 2>/dev/null)
-os_major=$(os-version.pl -j 2>/dev/null)
-os_minor=$(os-version.pl -n 2>/dev/null)
-os_patch=$(os-version.pl -p 2>/dev/null)
+# Never oputput STDOUT or STDERR in shell configs, it messes with ssh, etc.
+eval $(os-version.pl -s) || touch ~/DS_NOT_ON_PATH
+os_ver1=$os_major
+os_ver2=$os_major.$os_minor
+os_ver3=$os_major.$os_minor.$os_patch
 # $USER, $USERNAME, $LOGNAME can NOT be relied upon until after OS-specific fixes
 # from ~/ds/env/os_$os*.sh..  See ~/ds/doc/user-env-vars.txt for more info.
 user=$(id -un 2>/dev/null)
@@ -197,7 +194,7 @@ if [ -z "$user" ] ; then
     # SunOS `id` doesnt support -un, only the (optional) /usr/xpg4 version does
     user=$(logname)
 fi
-export os arch host user os_ver1 os_ver2 os_ver3 os_major os_minor os_patch
+export host os arch user os_major os_minor os_patch os_ver1 os_ver2 os_ver3
 
 if [ -r ~/.site ] ; then
   . ~/.site
@@ -249,7 +246,9 @@ if [ -r ~/ds/env/common.sh ] ; then
 fi
 
 #### Load SPECIFIC settings for this OS, site, host, user
-for env_bit in os_${os} os_${os_ver1} os_${os_ver2} os_${os_ver3}  \
+# Don't bother with $os_$arch env_bit, just having ~/bin/${os}-${arch} in PATH
+# is enough in practice.  Binaries are arch-specific, but not commands / flags.
+for env_bit in os_${os} os_${os}-${os_ver1} os_${os}-${os_ver2} os_${os}-${os_ver3}  \
                site_${SITE} site_${SITE}_os_${os}                  \
                host_${host} host_${host}_user_${user} ; do
   config=~/ds/env/${env_bit}.sh 
