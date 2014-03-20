@@ -62,15 +62,6 @@ function is-interactive-shell () {
 }
 
 #### Environment mainipulation functions
- 
-#pathadd() {
-#    if [ -d "$1" ] && [[ ":$PATH:" != *":$1:"* ]]; then
-#        PATH="$PATH:$1"
-#    fi
-#}
-# Or
-# alias checkInPath="echo $PATH | tr ':' '\n' | grep -x -c "
-
 function path_append () {
   # stolen from fink's init.sh
   if   eval test -z "\"\${$1}\"" ; then
