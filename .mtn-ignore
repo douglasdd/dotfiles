@@ -1,0 +1,12 @@
+doc/java\-tips\.html
+todo/todo.tmp
+home/.xemacs/package-index.LATEST.gpg
+home/.config/ipython/profile_default/db
+home/.config/ipython/profile_default/history.sqlite
+home/.config/ipython/profile_default/log
+home/.config/ipython/profile_default/pid
+home/.config/ipython/profile_default/security
+settings/apt-list_host_douglasdd.txt
+settings/host_douglasdd.log
+^settings/todo-txt-backup/todo.tmp
+.git

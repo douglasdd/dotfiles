@@ -23,6 +23,7 @@ alias bashrc='pushd ~ ; . .bashrc ; popd'
 # * No thought has been given (yet) to making the ~/ds/ directory re-locatable,
 # * Many of the scripts assume that ~/ds/bin/ is in the $PATH.
 # * More things should be set up only when `if is-interactive-shell`
+# * TODO do a better job when [ "${BASH:-no}" = "no" ]
 
 #### Notes
 # * These env scripts are designed to *replace* current settings, not
@@ -220,6 +221,7 @@ export HOSTNAME
 if [ !  -d ~/log ] ; then 
   mkdir -p ~/log
 fi
+
 if [ ! -d  ~/tmp ] ; then
   mkdir -p ~/tmp
   test -d ~/tmp/vim || mkdir ~/tmp/vim
@@ -227,7 +229,11 @@ fi
 if [ ! -d ~/.config/host/$host ] ; then
   mkdir -p ~/.config/host/$host
 fi
+# TODO: $XDG_DATA_HOME, et. al. See:
+# http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html>
 
+# Instead of inserting a literal tab char in this file -- because then some
+# tools consider this a "binary" file (dumb).
 TAB=$(builtin echo -en "\t")
 
 CLASSPATH="."

@@ -12,6 +12,10 @@
 # * see ~/ds/TODO.txt
 # * I `export` too many things
 
+#### TODO:
+# * Organize "To-be-Filed" stuff at the bottom
+# * find-up.{sh,pl,py} Recurse up dirs to / looking for a file (think .p4config, _MTN, .svn, etc)
+
 # Note: When changing aliases into functions: add `unalias the_name 2>/dev/null`
 # as a temporary work-around needed for `bashrc` re-sourcing existing shells.
 

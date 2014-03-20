@@ -2,9 +2,15 @@
 
 # See also: name, name-{auto,man}, title, and $PROMPT_COMMAND
 
-# Use explicit background colours to ensure that it works on b/w, w/b, ...
+#[18:05:13 Wed Mar 19] (X:0 [asdf]) "foo" !2
+#[douglasdd@douglasdd-macbookpro] (0) ~
+#0 $ 
 
-# TODO if [ $? -eq 0 ] ; then 
+# NOTE: Use explicit background colours to ensure that it works on b/w, w/b, ...
+
+return_code_=$?
+
+# TODO if [ $return_code_ -eq 0 ] ; then 
 #    ${GREEN_OK}$ $? ${RESET} \n
 # else
 #    ${RED_ERR} $? \n ${RESET}
